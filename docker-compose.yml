@@ -1,0 +1,39 @@
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    ports:
+      - "3000:8080"
+    environment:
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?set WEBUI_SECRET_KEY in .env}
+      # Any OpenAI-compatible endpoint with tool calling (OpenAI, NVIDIA NIM, vLLM, LiteLLM...). Leave blank to use the UI.
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Fallback Elasticsearch connection for the tool when its valves are left blank
+      ES_URL: ${ES_URL:-http://elasticsearch:9200}
+      ES_API_KEY: ${ES_API_KEY:-}
+      ES_USERNAME: ${ES_USERNAME:-}
+      ES_PASSWORD: ${ES_PASSWORD:-}
+    volumes:
+      - open-webui-data:/app/backend/data
+    restart: unless-stopped
+
+  # Optional throwaway single-node Elasticsearch for trying the agent:  docker compose --profile dev up -d
+  # then load demo data:  python scripts/load_sample_data.py
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ES_VERSION:-8.15.3}
+    container_name: elasticsearch
+    profiles: ["dev"]
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+
+volumes:
+  open-webui-data:
+  es-data:
